@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Global Business Pay Monetizer</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+  <h1>🌐 Global Business Pay Monetizer</h1>
+
+  <button id="connect">🔗 Connect TronLink Wallet</button>
+  <p id="wallet">Wallet: Not connected</p>
+
+  <form id="monetizeForm">
+    <label for="amount">Enter USDT amount to monetize:</label>
+    <input type="number" id="amount" step="0.000001" min="1" required />
+    <button type="submit">🚀 Monetize Now</button>
+  </form>
+
+  <script>
+    let walletAddress = null;
+
+    document.getElementById("connect").addEventListener("click", async () => {
+      if (window.tronWeb && window.tronWeb.defaultAddress.base58) {
+        walletAddress = window.tronWeb.defaultAddress.base58;
+        document.getElementById("wallet").innerText = "Wallet: " + walletAddress;
+        Swal.fire("Connected!", walletAddress, "success");
+      } else {
+        Swal.fire("Error", "Please open in Chrome or Edge and log in to TronLink", "error");
+      }
+    });
+
+    document.getElementById("monetizeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!walletAddress) {
+        Swal.fire("Error", "Connect your wallet first!", "error");
+        return;
+      }
+
+      const amount = parseFloat(document.getElementById("amount").value);
+      const feePercent = 3;
+      const netAmount = amount * (1 - feePercent / 100);
+
+      // In actual implementation: send the transaction to backend or smart contract
+      Swal.fire(
+        "Transaction Sent",
+        `You sent ${amount} USDT.\nAfter 3% fee: ${netAmount.toFixed(6)} USDT will be processed.`,
+        "success"
+      );
+
+      // You would trigger the blockchain TX here
+    });
+  </script>
+</body>
+</html>
