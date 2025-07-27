@@ -1,0 +1,112 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Global Business Pay Monetizer - Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/tronweb@4.4.0/dist/TronWeb.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f7f9fc; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        button { background-color: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 5px; }
+        button:hover { background-color: #0056b3; }
+        .status { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Admin Panel - Global Business Pay Monetizer</h2>
+
+        <table id="requestsTable">
+            <thead>
+                <tr>
+                    <th>Wallet Address</th>
+                    <th>GBPay Wallet ID</th>
+                    <th>Amount (USDT)</th>
+                    <th>Status</th>
+                    <th>TX Hash</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows inserted here -->
+            </tbody>
+        </table>
+
+        <div class="status" id="status"></div>
+    </div>
+
+<script>
+const FEE_PERCENT = 3;
+const FEE_WALLET = 'TLKGJxJV6X81xDu5ZTk8dpn5mgDEHzCQ7m';
+const USDT_CONTRACT = 'TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj';
+
+let tronWeb;
+
+async function connectWallet() {
+    if(window.tronWeb && window.tronWeb.defaultAddress.base58){
+        tronWeb = window.tronWeb;
+        document.getElementById('status').innerText = 'Connected admin wallet: ' + tronWeb.defaultAddress.base58;
+        loadRequests();
+    } else {
+        document.getElementById('status').innerText = 'Please install and log in to TronLink as admin.';
+    }
+}
+
+async function loadRequests() {
+    let requests = JSON.parse(localStorage.getItem('gbp_requests') || '[]');
+    const tbody = document.querySelector('#requestsTable tbody');
+    tbody.innerHTML = '';
+    requests.forEach((req, index) => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${req.wallet}</td>
+            <td>${req.gbpayId}</td>
+            <td>${req.amount}</td>
+            <td>${req.status}</td>
+            <td>${req.txHash ? '<a href="https://tronscan.org/#/transaction/' + req.txHash + '" target="_blank">' + req.txHash + '</a>' : ''}</td>
+            <td>
+                ${req.status === 'pending' ? `<button onclick="approveRequest(${index})">Approve</button>` : ''}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function approveRequest(index) {
+    let requests = JSON.parse(localStorage.getItem('gbp_requests') || '[]');
+    let req = requests[index];
+    if(!tronWeb){
+        alert('Connect admin wallet first.');
+        return;
+    }
+    const contract = await tronWeb.contract().at(USDT_CONTRACT);
+    const totalAmount = req.amount;
+    const fee = (totalAmount * FEE_PERCENT) / 100;
+    const payout = totalAmount - fee;
+    const feeSun = tronWeb.toSun(fee.toFixed(6));
+    const payoutSun = tronWeb.toSun(payout.toFixed(6));
+
+    try {
+        document.getElementById('status').innerText = 'Sending fee to platform wallet...';
+        await contract.transfer(FEE_WALLET, feeSun).send();
+        document.getElementById('status').innerText = 'Sending payout to user...';
+        const tx = await contract.transfer(req.wallet, payoutSun).send();
+        req.status = 'approved';
+        req.txHash = tx;
+        requests[index] = req;
+        localStorage.setItem('gbp_requests', JSON.stringify(requests));
+        loadRequests();
+        document.getElementById('status').innerText = 'Approved and payout sent. TX: ' + tx;
+    } catch (err) {
+        document.getElementById('status').innerText = 'Error: ' + err.message;
+    }
+}
+
+connectWallet();
+</script>
+</body>
+</html>

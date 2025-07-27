@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Global Business Pay Monetizer - User</title>
+    <script src="https://cdn.jsdelivr.net/npm/tronweb@4.4.0/dist/TronWeb.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #eef2f7; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+        input, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; }
+        button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .status { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Global Business Pay Monetizer</h2>
+        <button id="connectBtn">Connect TronLink Wallet</button>
+        <p id="walletAddress"></p>
+
+        <input type="text" id="gbpayId" placeholder="Enter Global Business Pay Wallet ID" />
+        <input type="number" id="amount" placeholder="Enter amount to monetize (USDT TRC20)" />
+        <button id="submitBtn">Submit Monetization Request</button>
+
+        <div class="status" id="status"></div>
+    </div>
+
+<script>
+let tronWeb;
+let walletAddress;
+
+async function connectWallet() {
+    if(window.tronWeb && window.tronWeb.defaultAddress.base58){
+        tronWeb = window.tronWeb;
+        walletAddress = tronWeb.defaultAddress.base58;
+        document.getElementById('walletAddress').innerText = 'Connected wallet: ' + walletAddress;
+        document.getElementById('status').innerText = '';
+    } else {
+        document.getElementById('status').innerText = 'Please install and log in to TronLink.';
+    }
+}
+
+document.getElementById('connectBtn').addEventListener('click', async () => {
+    await connectWallet();
+});
+
+document.getElementById('submitBtn').addEventListener('click', async () => {
+    if(!tronWeb){
+        alert('Connect your TronLink wallet first.');
+        return;
+    }
+    const gbpayId = document.getElementById('gbpayId').value.trim();
+    const amount = parseFloat(document.getElementById('amount').value);
+    if(!gbpayId) {
+        alert('Please enter your Global Business Pay Wallet ID.');
+        return;
+    }
+    if(!amount || amount <= 0) {
+        alert('Enter a valid amount.');
+        return;
+    }
+
+    // Create a request object
+    const request = {
+        wallet: walletAddress,
+        gbpayId: gbpayId,
+        amount: amount,
+        status: 'pending',
+        txHash: '',
+        submittedAt: new Date().toISOString()
+    };
+
+    // Save request to localStorage for simplicity (in real app backend needed)
+    let requests = JSON.parse(localStorage.getItem('gbp_requests') || '[]');
+    requests.push(request);
+    localStorage.setItem('gbp_requests', JSON.stringify(requests));
+
+    document.getElementById('status').innerText = 'Request submitted. Waiting for admin approval.';
+});
+</script>
+</body>
+</html>
